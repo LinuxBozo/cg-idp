@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+
+       default-init-method="initialize"
+       default-destroy-method="destroy">
+
+
+    <!-- Apply any regular expression replacement pairs to address before validation. -->
+    <util:list id="shibboleth.authn.IPAddress.Transforms" />
+
+    <!--
+    Configure the address range(s) and principal name(s) for IP-based login here.
+    The ranges provided MUST be CIDR network expressions. To specify a single address,
+    add "/32" or "/128" for IPv4 or IPv6 respectively.
+    -->
+
+
+    <util:map id="shibboleth.authn.IPAddress.Mappings">
+
+        <entry key="adam.kendall">
+            <list>
+                <value>73.251.110.95/32</value>
+            </list>
+        </entry>
+        <entry key="john.barnicle">
+            <list>
+                <value>71.228.56.201/32</value>
+            </list>
+        </entry>
+        <entry key="gsa.employee">
+            <list>
+                <value>159.142.0.0/16</value>
+            </list>
+        </entry>
+
+    </util:map>
+
+</beans>

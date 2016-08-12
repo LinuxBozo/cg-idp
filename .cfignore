@@ -1,0 +1,9 @@
+.gradle
+gradle
+dist
+doc
+edit-webapp
+old-*
+build
+*.log
+logs

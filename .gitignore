@@ -1,0 +1,6 @@
+.gradle
+old-*
+build
+*.log
+logs
+credentials

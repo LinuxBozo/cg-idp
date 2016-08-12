@@ -1,0 +1,6 @@
+#!/bin/sh
+./bin/build.sh <<EOF
+
+EOF
+./gradlew build
+cf push

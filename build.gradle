@@ -1,0 +1,17 @@
+
+task build(type: Zip) {
+    baseName 'idp-test'
+    from ('./')
+    include '**/*'
+    exclude 'build/**'
+    exclude 'logs/**'
+    exclude '**/*.log'
+    exclude '.gradle/**'
+    exclude 'old-**/*'
+    exclude 'dist/**'
+    exclude 'edit-webapp/**'
+    exclude 'doc/**'
+    exclude 'gradle/**'
+    destinationDir file('build')
+}
+
