@@ -1,8 +1,8 @@
 ---
 applications:
 - name: idp-test
-  memory: 1024M
+  memory: 2048M
   path: build/idp-test.zip
-  instances: 1
+  instances: 2
   buildpack: https://github.com/cloudfoundry/java-buildpack.git
 
