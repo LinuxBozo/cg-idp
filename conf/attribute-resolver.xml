@@ -67,7 +67,7 @@
 
         <ad:Template>
           <![CDATA[
-               ${uid}@fr.cloud.gov
+               ${uid}
           ]]>
         </ad:Template>
         <ad:SourceAttribute>uid</ad:SourceAttribute>
