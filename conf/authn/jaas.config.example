@@ -1,0 +1,16 @@
+ShibUserPassAuth {
+    /*
+	com.sun.security.auth.module.Krb5LoginModule required;
+	*/
+
+    com.tagish.auth.BCryptDBLogin required
+        debug=true
+        dbDriver="org.postgresql.Driver"
+        dbURL="jdbc:postgresql://host/database"
+        dbUser="user"
+        dbPassword="password"
+        userTable="users"
+        userColumn="username"
+        passColumn="password";
+
+};
