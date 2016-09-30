@@ -1,0 +1,731 @@
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/bin/build.xml ./bin/build.xml
+--- ../idp-two/bin/build.xml	2016-08-23 16:48:02.000000000 -0400
++++ ./bin/build.xml	2016-08-04 11:18:23.000000000 -0400
+@@ -79,7 +79,7 @@
+
+     <target name="geturisubjectaltname" if="idp.generate.altname" depends="checkproperties, gethostname">
+         <TGT>geturisubjectname</TGT>
+-        <property name="idp.uri.subject.alt.name" value="https://${idp.host.name}/idp/shibboleth" />
++        <property name="idp.uri.subject.alt.name" value="https://${idp.host.name}/shibboleth" />
+     </target>
+
+     <target name="getkeystorepassword" if="idp.ask.keystore.password" depends="checkproperties">
+@@ -164,7 +164,7 @@
+         <TGT>getentityid</TGT>
+         <fail if="idp.noprompt">Input needed, silence demanded</fail>
+         <local name="entityid" />
+-        <input message="SAML EntityID:" addproperty="entityid" defaultvalue="https://${idp.host.name}/idp/shibboleth" />
++        <input message="SAML EntityID:" addproperty="entityid" defaultvalue="https://${idp.host.name}/shibboleth" />
+         <property name="idp.uri.subject.alt.name" value="${entityid}" />
+         <echo file="${idp.merge.properties}" append="yes">
+             idp.entityID=${entityid}
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/attribute-filter.xml ./conf/attribute-filter.xml
+--- ../idp-two/conf/attribute-filter.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/attribute-filter.xml	2016-08-10 15:28:53.000000000 -0400
+@@ -1,10 +1,10 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<!--
+-    This file is an EXAMPLE policy file.  While the policy presented in this
++<!--
++    This file is an EXAMPLE policy file.  While the policy presented in this
+     example file is illustrative of some simple cases, it relies on the names of
+     non-existent example services and the example attributes demonstrated in the
+     default attribute-resolver.xml file.
+-
++
+     Deployers should refer to the documentation for a complete list of components
+     and their options.
+ -->
+@@ -15,15 +15,14 @@
+
+     <!-- Release some attributes to an SP. -->
+     <AttributeFilterPolicy id="example1">
+-        <PolicyRequirementRule xsi:type="Requester" value="https://sp.example.org" />
+-
+-        <AttributeRule attributeID="eduPersonPrincipalName">
+-            <PermitValueRule xsi:type="ANY" />
+-        </AttributeRule>
++        <PolicyRequirementRule xsi:type="OR">
++            <Rule xsi:type="Requester" value="https://sp.testshib.org/shibboleth-sp" />
++            <Rule xsi:type="Requester" value="login.fr-stage.cloud.gov" />
++        </PolicyRequirementRule>
+
+-        <AttributeRule attributeID="uid">
++<!--         <AttributeRule attributeID="eduPersonPrincipalName">
+             <PermitValueRule xsi:type="ANY" />
+-        </AttributeRule>
++        </AttributeRule> -->
+
+         <AttributeRule attributeID="mail">
+             <PermitValueRule xsi:type="ANY" />
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/attribute-resolver.xml ./conf/attribute-resolver.xml
+--- ../idp-two/conf/attribute-resolver.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/attribute-resolver.xml	2016-08-19 11:55:49.000000000 -0400
+@@ -1,10 +1,10 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<!--
++<!--
+     This file is an EXAMPLE configuration file. While the configuration
+     presented in this example file is semi-functional, it isn't very
+     interesting. It is here only as a starting point for your deployment
+     process.
+-
++
+     Very few attribute definitions and data connectors are demonstrated,
+     and the data is derived statically from the logged-in username and a
+     static example connector.
+@@ -14,13 +14,13 @@
+     documentation for a complete list of components and their options.
+ -->
+ <resolver:AttributeResolver
+-        xmlns:resolver="urn:mace:shibboleth:2.0:resolver"
++        xmlns:resolver="urn:mace:shibboleth:2.0:resolver"
+         xmlns:pc="urn:mace:shibboleth:2.0:resolver:pc"
+-        xmlns:ad="urn:mace:shibboleth:2.0:resolver:ad"
++        xmlns:ad="urn:mace:shibboleth:2.0:resolver:ad"
+         xmlns:dc="urn:mace:shibboleth:2.0:resolver:dc"
+-        xmlns:enc="urn:mace:shibboleth:2.0:attribute:encoder"
++        xmlns:enc="urn:mace:shibboleth:2.0:attribute:encoder"
+         xmlns:sec="urn:mace:shibboleth:2.0:security"
+-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="urn:mace:shibboleth:2.0:resolver http://shibboleth.net/schema/idp/shibboleth-attribute-resolver.xsd
+                             urn:mace:shibboleth:2.0:resolver:pc http://shibboleth.net/schema/idp/shibboleth-attribute-resolver-pc.xsd
+                             urn:mace:shibboleth:2.0:resolver:ad http://shibboleth.net/schema/idp/shibboleth-attribute-resolver-ad.xsd
+@@ -37,7 +37,7 @@
+     For guidelines on the implementation of this attribute, refer
+     to the Shibboleth and eduPerson documentation. Above all, do
+     not expose a value for this attribute without considering the
+-    long term implications.
++    long term implications.
+     -->
+     <resolver:AttributeDefinition id="eduPersonPrincipalName" xsi:type="ad:Scoped" scope="%{idp.scope}" sourceAttributeID="uid">
+         <resolver:Dependency ref="uid" />
+@@ -64,9 +64,10 @@
+         <resolver:Dependency ref="uid" />
+         <resolver:AttributeEncoder xsi:type="enc:SAML1String" name="urn:mace:dir:attribute-def:mail" encodeType="false" />
+         <resolver:AttributeEncoder xsi:type="enc:SAML2String" name="urn:oid:0.9.2342.19200300.100.1.3" friendlyName="mail" encodeType="false" />
++
+         <ad:Template>
+           <![CDATA[
+-               ${uid}@example.org
++               ${uid}
+           ]]>
+         </ad:Template>
+         <ad:SourceAttribute>uid</ad:SourceAttribute>
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/authn/jaas.config ./conf/authn/jaas.config
+--- ../idp-two/conf/authn/jaas.config	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/authn/jaas.config	2016-08-23 13:28:59.000000000 -0400
+@@ -3,9 +3,12 @@
+ 	com.sun.security.auth.module.Krb5LoginModule required;
+ 	*/
+
+-    org.ldaptive.jaas.LdapLoginModule required
+-      ldapUrl="ldap://localhost:10389"
+-      baseDn="ou=people,dc=example,dc=org"
+-      userFilter="uid={user}";
++    com.tagish.auth.DBLogin required
++      REST OF CONFIG GOES HERE
+
+ };
+\ No newline at end of file
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/authn/jaas.config.example ./conf/authn/jaas.config.example
+--- ../idp-two/conf/authn/jaas.config.example	1969-12-31 19:00:00.000000000 -0500
++++ ./conf/authn/jaas.config.example	2016-08-19 16:49:44.000000000 -0400
+@@ -0,0 +1,16 @@
++ShibUserPassAuth {
++    /*
++	com.sun.security.auth.module.Krb5LoginModule required;
++	*/
++
++    com.tagish.auth.DBLogin required
++        debug=true
++        dbDriver="org.postgresql.Driver"
++        dbURL="jdbc:postgresql://host/database"
++        dbUser="user"
++        dbPassword="password"
++        userTable="users"
++        userColumn="username"
++        passColumn="password";
++
++};
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/authn/password-authn-config.xml ./conf/authn/password-authn-config.xml
+--- ../idp-two/conf/authn/password-authn-config.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/authn/password-authn-config.xml	2016-08-17 14:27:44.000000000 -0400
+@@ -8,16 +8,16 @@
+        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+-
++
+        default-init-method="initialize"
+        default-destroy-method="destroy">
+-
++
+     <!-- Choose an import based on the back-end you want to use. -->
+-    <!-- <import resource="jaas-authn-config.xml" /> -->
++    <import resource="jaas-authn-config.xml" />
+     <!-- <import resource="krb5-authn-config.xml" /> -->
+-    <import resource="ldap-authn-config.xml" />
+-
+-
++    <!-- <import resource="ldap-authn-config.xml" /> -->
++
++
+     <!-- Names of form fields to pull username and password from. -->
+     <bean id="shibboleth.authn.Password.UsernameFieldName" class="java.lang.String" c:_0="j_username" />
+     <bean id="shibboleth.authn.Password.PasswordFieldName" class="java.lang.String" c:_0="j_password" />
+@@ -79,13 +79,13 @@
+
+     <!--
+     Configuration of "extended" login methods to offer in the password login form.
+-
++
+     The String bean is a regular expression identifying the flows to offer. These flows
+     must also be enabled at the "top" level to be available for use.
+-
++
+     The ExtendedFlowParameters bean can be used to transfer custom parameters from the
+     login form into the context tree for use later by other flows.
+-
++
+     The last bean provides the set of custom Principals to use for results produced by the
+     Password flow itself. You would use this if you need the Password flow to run as a shell
+     to run the "extended" login methods, but want to limit its own results more narrowly.
+@@ -105,5 +105,5 @@
+             c:method="urn:oasis:names:tc:SAML:1.0:am:password" />
+     </util:list>
+     -->
+-
++
+ </beans>
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/idp.properties ./conf/idp.properties
+--- ../idp-two/conf/idp.properties	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/idp.properties	2016-08-23 16:21:34.000000000 -0400
+@@ -2,10 +2,10 @@
+ idp.additionalProperties= /conf/ldap.properties, /conf/saml-nameid.properties, /conf/services.properties
+
+ # Set the entityID of the IdP
+-idp.entityID= https://localhost.localdomain/idp/shibboleth
++idp.entityID= https://idp-test.fr-stage.cloud.gov/shibboleth
+
+ # Set the scope used in the attribute resolver for scoped attributes
+-idp.scope= localdomain
++idp.scope= fr-stage.cloud.gov
+
+ # General cookie properties (maxAge only applies to persistent cookies)
+ #idp.cookie.secure = false
+@@ -26,8 +26,8 @@
+ #idp.sealer.aliasBase = secret
+ idp.sealer.storeResource= %{idp.home}/credentials/sealer.jks
+ idp.sealer.versionResource= %{idp.home}/credentials/sealer.kver
+-idp.sealer.storePassword= bar
+-idp.sealer.keyPassword= bar
++idp.sealer.storePassword= PASSWORD GOES HERE
++idp.sealer.keyPassword= PASSWORD GOES HERE
+
+ # Settings for public/private signing and encryption key(s)
+ # During decryption key rollover, point the ".2" properties at a second
+@@ -60,7 +60,7 @@
+
+ # Configuration of client- and server-side storage plugins
+ #idp.storage.cleanupInterval = PT10M
+-#idp.storage.htmlLocalStorage = false
++idp.storage.htmlLocalStorage = true
+
+ # Set to true to expose more detailed errors in responses to SPs
+ #idp.errors.detailed = false
+@@ -74,10 +74,10 @@
+ #idp.errors.defaultView = error
+
+ # Set to false to disable the IdP session layer
+-#idp.session.enabled = true
++idp.session.enabled = true
+
+ # Set to "shibboleth.StorageService" for server-side storage of user sessions
+-#idp.session.StorageService = shibboleth.ClientSessionStorageService
++idp.session.StorageService = shibboleth.ClientSessionStorageService
+
+ # Size of session IDs
+ #idp.session.idSize = 32
+@@ -90,14 +90,14 @@
+ # Tolerate storage-related errors
+ #idp.session.maskStorageFailure = false
+ # Track information about SPs logged into
+-#idp.session.trackSPSessions = false
++idp.session.trackSPSessions = true
+ # Support lookup by SP for SAML logout
+-#idp.session.secondaryServiceIndex = false
++idp.session.secondaryServiceIndex = true
+ # Length of time to track SP sessions
+ #idp.session.defaultSPlifetime = PT2H
+
+ # Regular expression matching login flows to enable, e.g. IPAddress|Password
+-idp.authn.flows= Password
++idp.authn.flows=Password
+
+ # Regular expression of forced "initial" methods when no session exists,
+ # usually in conjunction with the idp.authn.resolveAttribute property below.
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/metadata-providers.xml ./conf/metadata-providers.xml
+--- ../idp-two/conf/metadata-providers.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/metadata-providers.xml	2016-08-05 13:20:39.000000000 -0400
+@@ -7,10 +7,10 @@
+     xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="urn:mace:shibboleth:2.0:metadata http://shibboleth.net/schema/idp/shibboleth-metadata.xsd
+-                        urn:mace:shibboleth:2.0:resource http://shibboleth.net/schema/idp/shibboleth-resource.xsd
++                        urn:mace:shibboleth:2.0:resource http://shibboleth.net/schema/idp/shibboleth-resource.xsd
+                         urn:mace:shibboleth:2.0:security http://shibboleth.net/schema/idp/shibboleth-security.xsd
+                         urn:oasis:names:tc:SAML:2.0:metadata http://docs.oasis-open.org/security/saml/v2.0/saml-schema-metadata-2.0.xsd">
+-
++
+     <!-- ========================================================================================== -->
+     <!--                             Metadata Configuration                                         -->
+     <!--                                                                                            -->
+@@ -19,7 +19,7 @@
+     <!--                                                                                            -->
+     <!--  Two examples are provided.  The Shibboleth Documentation at                               -->
+     <!--  https://wiki.shibboleth.net/confluence/display/IDP30/MetadataConfiguration                -->
+-    <!--  provides more details.                                                                    -->
++    <!--  provides more details.                                                                    -->
+     <!--                                                                                            -->
+     <!--  NOTE.  This file SHOULD NOT contain the metadata for this IdP.                            -->
+     <!--                                                                                            -->
+@@ -34,15 +34,15 @@
+     with them via some out of band mechanism.
+
+     The EntityRoleWhiteList saves memory by only loading metadata from SAML roles
+-    that the IdP needs to interoperate with.
++    that the IdP needs to interoperate with.
+     -->
+-
++
+     <!--
+     <MetadataProvider id="HTTPMetadata"
+                       xsi:type="FileBackedHTTPMetadataProvider"
+                       backingFile="%{idp.home}/metadata/localCopyFromXYZHTTP.xml"
+-                      metadataURL="http://WHATEVER">
+-
++                      metadataURL="http://WHATEVER">
++
+         <MetadataFilter xsi:type="SignatureValidation" requireSignedRoot="true">
+             <PublicKey>
+                 MIIBI.....
+@@ -53,20 +53,27 @@
+             <RetainedRole>md:SPSSODescriptor</RetainedRole>
+         </MetadataFilter>
+     </MetadataProvider>
+-    -->
++    -->
+
+     <!--
+     Example file metadata provider.  Use this if you want to load metadata
+     from a local file.  You might use this if you have some local SPs
+     which are not "federated" but you wish to offer a service to.
+-
++
+     If you do not provide a SignatureValidation filter, then you have the responsibility to
+     ensure that the contents are trustworthy.
+     -->
+-
++
+     <!--
+     <MetadataProvider id="LocalMetadata"  xsi:type="FilesystemMetadataProvider" metadataFile="PATH_TO_YOUR_METADATA"/>
+     -->
+-
+-
++
++    <MetadataProvider id="HTTPMetadataTESTSHIB"
++                  xsi:type="FileBackedHTTPMetadataProvider"
++                  backingFile="%{idp.home}/metadata/testshib-providers.xml"
++                  metadataURL="http://www.testshib.org/metadata/testshib-providers.xml"/>
++    <MetadataProvider id="CGStaging"
++                  xsi:type="FileBackedHTTPMetadataProvider"
++                  backingFile="%{idp.home}/metadata/fr-stage-providers.xml"
++                  metadataURL="https://uaa.fr-stage.cloud.gov/saml/metadata"/>
+ </MetadataProvider>
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/relying-party.xml ./conf/relying-party.xml
+--- ../idp-two/conf/relying-party.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/relying-party.xml	2016-08-18 12:50:17.000000000 -0400
+@@ -8,22 +8,22 @@
+        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+-
++
+        default-init-method="initialize"
+        default-destroy-method="destroy">
+
+     <!--
+     Unverified RP configuration, defaults to no support for any profiles. Add <ref> elements to the list
+     to enable specific default profile settings (as below), or create new beans inline to override defaults.
+-
++
+     "Unverified" typically means the IdP has no metadata, or equivalent way of assuring the identity and
+     legitimacy of a requesting system. To run an "open" IdP, you can enable profiles here.
+     -->
+     <bean id="shibboleth.UnverifiedRelyingParty" parent="RelyingParty">
+         <property name="profileConfigurations">
+             <list>
+-            <!-- <bean parent="SAML2.SSO" p:encryptAssertions="false" /> -->
+-            </list>
++<!--                 <bean parent="SAML2.SSO" p:encryptAssertions="false" />
++ -->            </list>
+         </property>
+     </bean>
+
+@@ -50,7 +50,7 @@
+     <!-- Container for any overrides you want to add. -->
+
+     <util:list id="shibboleth.RelyingPartyOverrides">
+-
++
+         <!--
+         Override example that identifies a single RP by name and configures it
+         for SAML 2 SSO without encryption. This is a common "vendor" scenario.
+@@ -64,7 +64,15 @@
+             </property>
+         </bean>
+         -->
+-
++        <bean parent="RelyingPartyByName" c:relyingPartyIds="login.fr-stage.cloud.gov">
++            <property name="profileConfigurations">
++                <list>
++                    <bean parent="SAML2.SSO" p:encryptAssertions="false"
++                        p:nameIDFormatPrecedence="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" />
++                </list>
++            </property>
++        </bean>
++
+     </util:list>
+
+ </beans>
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/conf/saml-nameid.xml ./conf/saml-nameid.xml
+--- ../idp-two/conf/saml-nameid.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./conf/saml-nameid.xml	2016-08-11 14:06:03.000000000 -0400
+@@ -8,7 +8,7 @@
+        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+-
++
+        default-init-method="initialize"
+        default-destroy-method="destroy">
+
+@@ -21,29 +21,29 @@
+     control their use via release of the underlying source attribute in the filter policy rather
+     than here, but you can set a property on any generator called "activationCondition" to limit
+     use in the most generic way.
+-
++
+     Most of the relevant configuration settings are controlled using properties; an exception is
+     the generation of arbitrary/custom formats based on attribute information, examples of which
+     are shown below.
+-
++
+     -->
+-
++
+     <!-- SAML 2 NameID Generation -->
+     <util:list id="shibboleth.SAML2NameIDGenerators">
+-
++
+         <ref bean="shibboleth.SAML2TransientGenerator" />
+-
++        <bean parent="shibboleth.SAML2AttributeSourcedGenerator"
++            p:format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
++            p:attributeSourceIds="#{ {'mail'} }" />
++
+         <!-- Uncommenting this bean requires configuration in saml-nameid.properties. -->
+-        <!--
+-        <ref bean="shibboleth.SAML2PersistentGenerator" />
+-        -->
+
+-        <!--
++<!--         <ref bean="shibboleth.SAML2PersistentGenerator" />
+         <bean parent="shibboleth.SAML2AttributeSourcedGenerator"
+             p:format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+-            p:attributeSourceIds="#{ {'mail'} }" />
+-        -->
+-
++            p:attributeSourceIds="#{ {'mail'} }" /> -->
++
++
+     </util:list>
+
+     <!-- SAML 1 NameIdentifier Generation -->
+@@ -51,12 +51,12 @@
+
+         <ref bean="shibboleth.SAML1TransientGenerator" />
+
+-        <!--
++
+         <bean parent="shibboleth.SAML1AttributeSourcedGenerator"
+             p:format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+             p:attributeSourceIds="#{ {'mail'} }" />
+-        -->
+-
++
++
+     </util:list>
+-
++
+ </beans>
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/idp-backchannel.crt ./credentials/idp-backchannel.crt
+--- ../idp-two/credentials/idp-backchannel.crt	2016-08-23 16:48:06.000000000 -0400
++++ ./credentials/idp-backchannel.crt	2016-08-18 12:46:29.000000000 -0400
+@@ -1,20 +1,20 @@
+ -----BEGIN CERTIFICATE-----
+- OLD CERT
++ MY NEW CERT
+ -----END CERTIFICATE-----
+Binary files ../idp-two/credentials/idp-backchannel.p12 and ./credentials/idp-backchannel.p12 differ
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/idp-encryption.crt ./credentials/idp-encryption.crt
+--- ../idp-two/credentials/idp-encryption.crt	2016-08-23 16:48:05.000000000 -0400
++++ ./credentials/idp-encryption.crt	2016-08-18 12:46:13.000000000 -0400
+@@ -1,20 +1,20 @@
+ -----BEGIN CERTIFICATE-----
+- OLD CERT
++ MY NEW CERT
+ -----END CERTIFICATE-----
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/idp-encryption.key ./credentials/idp-encryption.key
+--- ../idp-two/credentials/idp-encryption.key	2016-08-23 16:48:05.000000000 -0400
++++ ./credentials/idp-encryption.key	2016-08-18 12:46:13.000000000 -0400
+@@ -1,27 +1,27 @@
+ -----BEGIN RSA PRIVATE KEY-----
+- OLD CERT
++ MY NEW CERT
+ -----END RSA PRIVATE KEY-----
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/idp-signing.crt ./credentials/idp-signing.crt
+--- ../idp-two/credentials/idp-signing.crt	2016-08-23 16:48:05.000000000 -0400
++++ ./credentials/idp-signing.crt	2016-08-18 12:46:12.000000000 -0400
+@@ -1,20 +1,20 @@
+ -----BEGIN CERTIFICATE-----
+- OLD CERT
++ MY NEW CERT
+ -----END CERTIFICATE-----
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/idp-signing.key ./credentials/idp-signing.key
+--- ../idp-two/credentials/idp-signing.key	2016-08-23 16:48:05.000000000 -0400
++++ ./credentials/idp-signing.key	2016-08-18 12:46:12.000000000 -0400
+@@ -1,27 +1,27 @@
+ -----BEGIN RSA PRIVATE KEY-----
+- OLD PRIVATE KEY
++ MY NEW PRIVATE KEY
+ -----END RSA PRIVATE KEY-----
+Binary files ../idp-two/credentials/sealer.jks and ./credentials/sealer.jks differ
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/credentials/sealer.kver ./credentials/sealer.kver
+--- ../idp-two/credentials/sealer.kver	2016-08-23 16:48:06.000000000 -0400
++++ ./credentials/sealer.kver	2016-08-18 12:46:38.000000000 -0400
+@@ -1,2 +1,2 @@
+-#Tue Aug 23 16:48:06 EDT 2016
++#Thu Aug 18 12:46:38 EDT 2016
+ CurrentVersion=1
+Binary files ../idp-two/edit-webapp/WEB-INF/lib/postgresql-9.4.1209.jre6.jar and ./edit-webapp/WEB-INF/lib/postgresql-9.4.1209.jre6.jar differ
+Binary files ../idp-two/edit-webapp/WEB-INF/lib/spring-security-crypto-4.1.2.RELEASE.jar and ./edit-webapp/WEB-INF/lib/spring-security-crypto-4.1.2.RELEASE.jar differ
+Binary files ../idp-two/edit-webapp/WEB-INF/lib/tagishauth.jar and ./edit-webapp/WEB-INF/lib/tagishauth.jar differ
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/edit-webapp/css/main.css ./edit-webapp/css/main.css
+--- ../idp-two/edit-webapp/css/main.css	2016-08-23 16:48:06.000000000 -0400
++++ ./edit-webapp/css/main.css	2016-08-04 11:32:43.000000000 -0400
+@@ -63,7 +63,7 @@
+         display: none;
+     }
+     .logo {
+-        background: url(../images/dummylogo-mobile.png) no-repeat top center;
++        background: url(../images/cloud-gov-logo-mobile.png) no-repeat top center;
+         display: block;
+         height: 115px;
+         width: 100px;
+Binary files ../idp-two/edit-webapp/images/cloud-gov-logo-mobile.png and ./edit-webapp/images/cloud-gov-logo-mobile.png differ
+Binary files ../idp-two/edit-webapp/images/cloud-gov-logo.png and ./edit-webapp/images/cloud-gov-logo.png differ
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/messages/error-messages.properties ./messages/error-messages.properties
+--- ../idp-two/messages/error-messages.properties	2016-08-23 16:48:06.000000000 -0400
++++ ./messages/error-messages.properties	2016-08-04 11:51:32.000000000 -0400
+@@ -5,12 +5,12 @@
+ # Title / Message mappings for error view
+
+ # General strings
+-idp.title = Web Login Service
++idp.title = cloud.gov Login Service
+ idp.title.suffix = Error
+-idp.logo = /images/dummylogo.png
+-idp.logo.alt-text = Replace or remove this logo
++idp.logo = /images/cloud-gov-logo.png
++idp.logo.alt-text = cloud.gov
+ idp.message = An unidentified error occurred.
+-idp.footer = Insert your footer text here.
++idp.footer = An official website of the United States Government
+
+ idp.client-storage-read.title = Loading Session State...
+ idp.client-storage-write.title = Saving Session State...
+@@ -114,6 +114,6 @@
+ error.title = Error
+ error.message = An error occurred: $eventId
+
+-root.title = Shibboleth IdP
++root.title = cloud.gov Login Service
+ root.message = No services are available at this location.
+-root.footer = Insert your footer text here.
++root.footer = An official website of the United States Government
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/metadata/fr-stage-providers.xml ./metadata/fr-stage-providers.xml
+--- ../idp-two/metadata/fr-stage-providers.xml	1969-12-31 19:00:00.000000000 -0500
++++ ./metadata/fr-stage-providers.xml	2016-08-05 11:55:59.000000000 -0400
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?><md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" ID="login.fr-stage.cloud.gov" entityID="login.fr-stage.cloud.gov"><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><ds:Reference URI="#login.fr-stage.cloud.gov"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>pEw4Ti78BiYFtBvMGsyQ/7NOYKw=</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>R1bxZ3RHRVmlYhS2kRExb0++9yeIzpLcUlWAVSXDfbNddBZ9vUHFGRAt+UzrLMZ41XPZVzKB7Anp8/YyzzOM2nGGBqXrRMuo2hViWO6+CqzaoM0p6+7f44VMGh+UoFJk2Eo7nWskH63+tjC2ax5Rj/u1qS0gbiFF+pmPQ+EjxDQ=</ds:SignatureValue><ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIIBuTCCASICCQCZrgoGYBrwOjANBgkqhkiG9w0BAQsFADAhMR8wHQYDVQQDDBZ1YWEsT1U9MThm
++LE89Z3NhLE89Z292MB4XDTE2MDQyODE1MzkzM1oXDTE3MDQyODE1MzkzM1owITEfMB0GA1UEAwwW
++dWFhLE9VPTE4ZixPPWdzYSxPPWdvdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAo/84KOjl
++P9LVTMahd/UXp1MHfy+JFY8hV4a23i4koAQs578qfCz+LEs0Jt2cfSO8V4asSjME/vcJBYeapcFm
++YYIyFLjmNTCztIl+Q80he9t6LgApdoy2iTSi39Daq2NmTGWk2xGLhtzBypIeM8UcfnI5bfWTuD5j
++55skVhfvN5MCAwEAATANBgkqhkiG9w0BAQsFAAOBgQAO9WiXjPp3bxKtowqouU0m2cjOollQeoGo
++XPFzrUsG2RI5vMGU09n3VQQRq5col6Rmy4Kha2k16Lnly7o2RkaRzF8Vvzs1enX6PfH7oawcck9V
++k1tKnWyMBtGfDSucNll3G0XLYHxNLkWxiBscPkipIqJmgqgzcdwK69TrtfVIlA==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></ds:Signature><md:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIBuTCCASICCQCZrgoGYBrwOjANBgkqhkiG9w0BAQsFADAhMR8wHQYDVQQDDBZ1YWEsT1U9MThm
++LE89Z3NhLE89Z292MB4XDTE2MDQyODE1MzkzM1oXDTE3MDQyODE1MzkzM1owITEfMB0GA1UEAwwW
++dWFhLE9VPTE4ZixPPWdzYSxPPWdvdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAo/84KOjl
++P9LVTMahd/UXp1MHfy+JFY8hV4a23i4koAQs578qfCz+LEs0Jt2cfSO8V4asSjME/vcJBYeapcFm
++YYIyFLjmNTCztIl+Q80he9t6LgApdoy2iTSi39Daq2NmTGWk2xGLhtzBypIeM8UcfnI5bfWTuD5j
++55skVhfvN5MCAwEAATANBgkqhkiG9w0BAQsFAAOBgQAO9WiXjPp3bxKtowqouU0m2cjOollQeoGo
++XPFzrUsG2RI5vMGU09n3VQQRq5col6Rmy4Kha2k16Lnly7o2RkaRzF8Vvzs1enX6PfH7oawcck9V
++k1tKnWyMBtGfDSucNll3G0XLYHxNLkWxiBscPkipIqJmgqgzcdwK69TrtfVIlA==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:KeyDescriptor use="encryption"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIBuTCCASICCQCZrgoGYBrwOjANBgkqhkiG9w0BAQsFADAhMR8wHQYDVQQDDBZ1YWEsT1U9MThm
++LE89Z3NhLE89Z292MB4XDTE2MDQyODE1MzkzM1oXDTE3MDQyODE1MzkzM1owITEfMB0GA1UEAwwW
++dWFhLE9VPTE4ZixPPWdzYSxPPWdvdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAo/84KOjl
++P9LVTMahd/UXp1MHfy+JFY8hV4a23i4koAQs578qfCz+LEs0Jt2cfSO8V4asSjME/vcJBYeapcFm
++YYIyFLjmNTCztIl+Q80he9t6LgApdoy2iTSi39Daq2NmTGWk2xGLhtzBypIeM8UcfnI5bfWTuD5j
++55skVhfvN5MCAwEAATANBgkqhkiG9w0BAQsFAAOBgQAO9WiXjPp3bxKtowqouU0m2cjOollQeoGo
++XPFzrUsG2RI5vMGU09n3VQQRq5col6Rmy4Kha2k16Lnly7o2RkaRzF8Vvzs1enX6PfH7oawcck9V
++k1tKnWyMBtGfDSucNll3G0XLYHxNLkWxiBscPkipIqJmgqgzcdwK69TrtfVIlA==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://login.fr-stage.cloud.gov/saml/SingleLogout/alias/login.fr-stage.cloud.gov"/><md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://login.fr-stage.cloud.gov/saml/SingleLogout/alias/login.fr-stage.cloud.gov"/><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName</md:NameIDFormat><md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://login.fr-stage.cloud.gov/saml/SSO/alias/login.fr-stage.cloud.gov" index="0" isDefault="true"/><md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://login.fr-stage.cloud.gov/saml/SSO/alias/login.fr-stage.cloud.gov" index="1"/></md:SPSSODescriptor></md:EntityDescriptor>
+\ No newline at end of file
+diff -ruN --exclude=.git --exclude='old-*' --exclude='*.log' ../idp-two/metadata/idp-metadata.xml ./metadata/idp-metadata.xml
+--- ../idp-two/metadata/idp-metadata.xml	2016-08-23 16:48:06.000000000 -0400
++++ ./metadata/idp-metadata.xml	2016-08-18 12:50:00.000000000 -0400
+@@ -1,49 +1,41 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<!--
+-     This is example metadata only. Do *NOT* supply it as is without review,
+-     and do *NOT* provide it in real time to your partners.
+-
+-     This metadata is not dynamic - it will not change as your configuration changes.
+--->
+-<EntityDescriptor  xmlns="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:xml="http://www.w3.org/XML/1998/namespace" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" entityID="https://localhost.localdomain/idp/shibboleth">
++<EntityDescriptor  xmlns="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:shibmd="urn:mace:shibboleth:metadata:1.0" xmlns:xml="http://www.w3.org/XML/1998/namespace" xmlns:mdui="urn:oasis:names:tc:SAML:metadata:ui" entityID="https://idp-test.fr-stage.cloud.gov/shibboleth">
+
+     <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol urn:oasis:names:tc:SAML:1.1:protocol urn:mace:shibboleth:1.0">
+
+         <Extensions>
+-            <shibmd:Scope regexp="false">localdomain</shibmd:Scope>
+-<!--
+-    Fill in the details for your IdP here
++            <shibmd:Scope regexp="false">fr-stage.cloud.gov</shibmd:Scope>
+
+             <mdui:UIInfo>
+-                <mdui:DisplayName xml:lang="en">A Name for the IdP at localhost.localdomain</mdui:DisplayName>
+-                <mdui:Description xml:lang="en">Enter a description of your IdP at localhost.localdomain</mdui:Description>
+-                <mdui:Logo height="80" width="80">https://localhost.localdomain/Path/To/Logo.png</mdui:Logo>
++                <mdui:DisplayName xml:lang="en">cloud.gov identity</mdui:DisplayName>
++                <mdui:Description xml:lang="en">Federated identity for cloud.gov users</mdui:Description>
++                <mdui:Logo height="80" width="80">https://idp-test.fr-stage.cloud.gov/images/cloud-gov-logo-mobile.png</mdui:Logo>
+             </mdui:UIInfo>
+--->
++
+         </Extensions>
+
+         <KeyDescriptor use="signing">
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY SIGNING CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+@@ -53,24 +45,24 @@
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY SIGNING CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+@@ -80,47 +72,46 @@
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY ENCRYPTION CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+
+         </KeyDescriptor>
+
+-        <ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://localhost.localdomain:8443/idp/profile/SAML1/SOAP/ArtifactResolution" index="1"/>
+-        <ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://localhost.localdomain:8443/idp/profile/SAML2/SOAP/ArtifactResolution" index="2"/>
+-
+-        <!--
+-        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://localhost.localdomain/idp/profile/SAML2/Redirect/SLO"/>
+-        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://localhost.localdomain/idp/profile/SAML2/POST/SLO"/>
+-        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://localhost.localdomain/idp/profile/SAML2/POST-SimpleSign/SLO"/>
+-        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://localhost.localdomain:8443/idp/profile/SAML2/SOAP/SLO"/>
+-        -->
++        <ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML1/SOAP/ArtifactResolution" index="1"/>
++        <ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/SOAP/ArtifactResolution" index="2"/>
++
++        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/Redirect/SLO"/>
++        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/POST/SLO"/>
++        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/POST-SimpleSign/SLO"/>
++        <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://idp-test.fr-stage.cloud.gov/idp/profile/SAML2/SOAP/SLO"/>
++
+
+-        <NameIDFormat>urn:mace:shibboleth:1.0:nameIdentifier</NameIDFormat>
+         <NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</NameIDFormat>
++        <NameIDFormat>urn:mace:shibboleth:1.0:nameIdentifier</NameIDFormat>
+
+-        <SingleSignOnService Binding="urn:mace:shibboleth:1.0:profiles:AuthnRequest" Location="https://localhost.localdomain/idp/profile/Shibboleth/SSO"/>
+-        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://localhost.localdomain/idp/profile/SAML2/POST/SSO"/>
+-        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://localhost.localdomain/idp/profile/SAML2/POST-SimpleSign/SSO"/>
+-        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://localhost.localdomain/idp/profile/SAML2/Redirect/SSO"/>
++        <SingleSignOnService Binding="urn:mace:shibboleth:1.0:profiles:AuthnRequest" Location="https://idp-test.fr-stage.cloud.gov/profile/Shibboleth/SSO"/>
++        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/POST/SSO"/>
++        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST-SimpleSign" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/POST-SimpleSign/SSO"/>
++        <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp-test.fr-stage.cloud.gov/profile/SAML2/Redirect/SSO"/>
+
+     </IDPSSODescriptor>
+
+@@ -128,31 +119,31 @@
+     <AttributeAuthorityDescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:1.1:protocol">
+
+         <Extensions>
+-            <shibmd:Scope regexp="false">localdomain</shibmd:Scope>
++            <shibmd:Scope regexp="false">fr-stage.cloud.gov</shibmd:Scope>
+         </Extensions>
+
+         <KeyDescriptor use="signing">
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY SIGNING CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+@@ -162,24 +153,24 @@
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY SIGNING CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+@@ -189,32 +180,32 @@
+             <ds:KeyInfo>
+                     <ds:X509Data>
+                         <ds:X509Certificate>
++ MY ENCRYPTION CERT
+                         </ds:X509Certificate>
+                     </ds:X509Data>
+             </ds:KeyInfo>
+
+         </KeyDescriptor>
+
+-        <AttributeService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://localhost.localdomain:8443/idp/profile/SAML1/SOAP/AttributeQuery"/>
+-        <!-- <AttributeService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://localhost.localdomain:8443/idp/profile/SAML2/SOAP/AttributeQuery"/> -->
++        <AttributeService Binding="urn:oasis:names:tc:SAML:1.0:bindings:SOAP-binding" Location="https://idp-test.fr-stage.cloud.gov/idp/profile/SAML1/SOAP/AttributeQuery"/>
++        <!-- <AttributeService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="https://idp-test.fr-stage.cloud.gov/idp/profile/SAML2/SOAP/AttributeQuery"/> -->
+         <!-- If you uncomment the above you should add urn:oasis:names:tc:SAML:2.0:protocol to the protocolSupportEnumeration above -->
+
+     </AttributeAuthorityDescriptor>
